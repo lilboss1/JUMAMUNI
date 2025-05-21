@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Juma - Jeu HTML</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111827;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 20px;
+    }
+
+    #game {
+      display: grid;
+      grid-template-columns: repeat(15, 24px);
+      grid-template-rows: repeat(15, 24px);
+      gap: 0;
+      margin-bottom: 20px;
+    }
+
+    .tile {
+      width: 24px;
+      height: 24px;
+      display: inline-block;
+      border: 1px solid #374151;
+    }
+
+    .empty { background-color: #1f2937; }
+    .wall { background-color: #4b5563; }
+    .player { background-color: #3b82f6; border-radius: 50%; }
+    .goal {
+      background-color: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    #message {
+      font-size: 18px;
+      font-weight: bold;
+      color: #10b981;
+      margin-bottom: 20px;
+    }
+
+    #controls {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px;
+      background-color: #374151;
+      border: none;
+      color: white;
+      font-size: 18px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #4b5563;
+    }
+
+    .center-btn {
+      opacity: 0.3;
+    }
+
+    #restart {
+      padding: 10px 20px;
+      background-color: #10b981;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #restart:hover {
+      background-color: #059669;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🕹️ Mini Juma</h1>
+  <p>Flèches ou WASD pour bouger | Atteins la case verte !</p>
+
+  <div id="game"></div>
+
+  <div id="message"></div>
+
+  <div id="controls">
+    <div></div><button onclick="move(0,-1)">↑</button><div></div>
+    <button onclick="move(-1,0)">←</button>
+    <button class="center-btn">•</button>
+    <button onclick="move(1,0)">→</button>
+    <div></div><button onclick="move(0,1)">↓</button><div></div>
+  </div>
+
+  <button id="restart" onclick="resetGame()">🔁 Recommencer</button>
+
+  <script>
+    const gridSize = 15;
+    let map = [];
+    const gameContainer = document.getElementById('game');
+    const messageEl = document.getElementById('message');
+
+    function createMap() {
+      const newMap = Array.from({ length: gridSize }, (_, y) =>
+        Array.from({ length: gridSize }, (_, x) => {
+          if (y === 0 || y === gridSize - 1 || x === 0 || x === gridSize - 1) return 'wall';
+          if (Math.random() < 0.2) return 'wall';
+          return 'empty';
+        })
+      );
+      newMap[1][1] = 'player';
+      newMap[gridSize - 2][gridSize - 2] = 'goal';
+      return newMap;
+    }
+
+    function drawMap() {
+      gameContainer.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const tile = document.createElement('div');
+          tile.classList.add('tile');
+          switch (map[y][x]) {
+            case 'wall': tile.classList.add('wall'); break;
+            case 'player': tile.classList.add('player'); break;
+            case 'goal': tile.classList.add('goal'); break;
+            default: tile.classList.add('empty');
+          }
+          gameContainer.appendChild(tile);
+        }
+      }
+    }
+
+    function findPlayer() {
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          if (map[y][x] === 'player') return { x, y };
+        }
+      }
+      return null;
+    }
+
+    function move(dx, dy) {
+      const pos = findPlayer();
+      if (!pos) return;
+
+      const newX = pos.x + dx;
+      const newY = pos.y + dy;
+
+      if (
+        newX >= 0 && newY >= 0 &&
+        newX < gridSize && newY < gridSize &&
+        map[newY][newX] !== 'wall'
+      ) {
+        const newMap = map.map(row => [...row]);
+        newMap[pos.y][pos.x] = 'empty';
+
+        if (newMap[newY][newX] === 'goal') {
+          newMap[newY][newX] = 'player';
+          map = newMap;
+          drawMap();
+          showMessage('🎉 Vous avez gagné !');
+          setTimeout(() => {
+            resetGame();
+          }, 2000);
+          return;
+        }
+
+        newMap[newY][newX] = 'player';
+        map = newMap;
+        drawMap();
+      }
+    }
+
+    function showMessage(text) {
+      messageEl.textContent = text;
+    }
+
+    function resetGame() {
+      map = createMap();
+      drawMap();
+      messageEl.textContent = '';
+    }
+
+    // Gestion des touches clavier
+    window.addEventListener('keydown', (e) => {
+      switch(e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          move(0, -1);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          move(0, 1);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          move(-1, 0);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          move(1, 0);
+          break;
+      }
+    });
+
+    // Initialisation
+    resetGame();
+  </script>
+
+</body>
+</html>
